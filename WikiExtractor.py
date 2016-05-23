@@ -56,10 +56,10 @@ import logging
 import os.path
 import re  # TODO use regex when it will be standard
 import time
-import urllib
-from cStringIO import StringIO
-from htmlentitydefs import name2codepoint
-from itertools import izip, izip_longest
+import urllib.request, urllib.parse, urllib.error
+from io import StringIO
+from html.entities import name2codepoint
+from itertools import zip_longest
 from multiprocessing import Queue, Process, Value, cpu_count
 from timeit import default_timer
 
@@ -220,11 +220,11 @@ def unescape(text):
         try:
             if text[1] == "#":  # character reference
                 if text[2] == "x":
-                    return unichr(int(code[1:], 16))
+                    return chr(int(code[1:], 16))
                 else:
-                    return unichr(int(code))
+                    return chr(int(code))
             else:  # named entity
-                return unichr(name2codepoint[code])
+                return chr(name2codepoint[code])
         except:
             return text  # leave as is
 
@@ -328,10 +328,10 @@ class Template(list):
         return ''.join([tpl.subst(params, extractor, depth) for tpl in self])
 
     def __str__(self):
-        return ''.join([unicode(x) for x in self])
+        return ''.join([str(x) for x in self])
 
 
-class TemplateText(unicode):
+class TemplateText(str):
     """Fixed text of template"""
 
     def subst(self, params, extractor, depth):
@@ -448,7 +448,7 @@ class Extractor(object):
             header += self.title + '\n'
         if not no_doc and not no_title:
             header += '\n'  # Separate header from text with a newline.
-        header = header.encode('utf-8')
+        # header = header.encode('utf-8')
         self.magicWords['pagename'] = self.title
         self.magicWords['fullpagename'] = self.title
         self.magicWords['currentyear'] = time.strftime('%Y')
@@ -464,7 +464,8 @@ class Extractor(object):
         if header:
             out.write(header)
         for line in compact(text):
-            out.write(line.encode('utf-8'))
+            out.write(line)
+            # out.write(line.encode('utf-8'))
             out.write('\n')
         out.write(footer)
         errs = (self.template_title_errs,
@@ -563,7 +564,7 @@ class Extractor(object):
                 text = text.replace(match.group(), '%s_%d' % (placeholder, index))
                 index += 1
 
-        text = text.replace('<<', u'«').replace('>>', u'»')
+        text = text.replace('<<', '«').replace('>>', '»')
 
         #############################################
 
@@ -571,8 +572,8 @@ class Extractor(object):
         text = text.replace('\t', ' ')
         text = spaces.sub(' ', text)
         text = dots.sub('...', text)
-        text = re.sub(u' (,:\.\)\]»)', r'\1', text)
-        text = re.sub(u'(\[\(«) ', r'\1', text)
+        text = re.sub(' (,:\.\)\]»)', r'\1', text)
+        text = re.sub('(\[\(«) ', r'\1', text)
         text = re.sub(r'\n\W+?\n', '\n', text, flags=re.U)  # lines with only punctuations
         text = text.replace(',,', ',').replace(',.', '.')
         if escape_doc:
@@ -1047,7 +1048,7 @@ def findBalanced(text, openDelim=['[['], closeDelim=[']]']):
     """
     openPat = '|'.join([re.escape(x) for x in openDelim])
     # pattern for delimiters expected after each opening delimiter
-    afterPat = {o: re.compile(openPat + '|' + c, re.DOTALL) for o, c in izip(openDelim, closeDelim)}
+    afterPat = {o: re.compile(openPat + '|' + c, re.DOTALL) for o, c in zip(openDelim, closeDelim)}
     stack = []
     start = 0
     cur = 0
@@ -1367,7 +1368,7 @@ def sharp_expr(expr):
         expr = re.sub('mod', '%', expr)
         expr = re.sub('\bdiv\b', '/', expr)
         expr = re.sub('\bround\b', '|ROUND|', expr)
-        return unicode(eval(expr))
+        return str(eval(expr))
     except:
         return '<span class="error"></span>'
 
@@ -1507,7 +1508,7 @@ parserFunctions = {
 
     # This function is used in some pages to construct links
     # http://meta.wikimedia.org/wiki/Help:URL
-    'urlencode': lambda string, *rest: urllib.quote(string.encode('utf-8')),
+    'urlencode': lambda string, *rest: urllib.parse.quote(string.encode('utf-8')),
 
     'lc': lambda string, *rest: string.lower() if string else '',
 
@@ -2019,7 +2020,7 @@ def makeInternalLink(title, label):
         if colon2 > 1 and title[colon + 1:colon2] not in acceptedNamespaces:
             return ''
     if Extractor.keepLinks:
-        return '<a href="%s">%s</a>' % (urllib.quote(title.encode('utf-8')), label)
+        return '<a href="%s">%s</a>' % (urllib.parse.quote(title.encode('utf-8')), label)
     else:
         return label
 
@@ -2097,7 +2098,7 @@ def replaceExternalLinks(text):
 def makeExternalLink(url, anchor):
     """Function applied to wikiLinks"""
     if Extractor.keepLinks:
-        return '<a href="%s">%s</a>' % (urllib.quote(url.encode('utf-8')), anchor)
+        return '<a href="%s">%s</a>' % (urllib.parse.quote(url.encode('utf-8')), anchor)
     else:
         return anchor
 
@@ -2172,7 +2173,7 @@ def compact(text):
             i = 0
             # c: current level char
             # n: next level char
-            for c, n in izip_longest(listLevel, line, fillvalue=''):
+            for c, n in zip_longest(listLevel, line, fillvalue=''):
                 if not n or n not in '*#;:': # shorter or different
                     if c:
                         if Extractor.toHTML:
@@ -2197,7 +2198,7 @@ def compact(text):
             if line:  # FIXME: n is '"'
                 if Extractor.keepLists:
                     # emit open sections
-                    items = headers.items()
+                    items = list(headers.items())
                     items.sort()
                     for i, v in items:
                         page.append(v)
@@ -2222,7 +2223,7 @@ def compact(text):
             continue
         elif len(headers):
             if Extractor.keepSections:
-                items = headers.items()
+                items = list(headers.items())
                 items.sort()
                 for i, v in items:
                     page.append(v)
@@ -2240,7 +2241,7 @@ def compact(text):
 def handle_unicode(entity):
     numeric_code = int(entity[2:-1])
     if numeric_code >= 0x10000: return ''
-    return unichr(numeric_code)
+    return chr(numeric_code)
 
 
 # ------------------------------------------------------------------------------
@@ -2259,7 +2260,7 @@ class NextFile(object):
         self.dir_index = -1
         self.file_index = -1
 
-    def next(self):
+    def __next__(self):
         self.file_index = (self.file_index + 1) % NextFile.filesPerDir
         if self.file_index == 0:
             self.dir_index += 1
@@ -2271,7 +2272,7 @@ class NextFile(object):
     def _dirname(self):
         char1 = self.dir_index % 26
         char2 = self.dir_index / 26 % 26
-        return os.path.join(self.path_name, '%c%c' % (ord('A') + char2, ord('A') + char1))
+        return os.path.join(self.path_name, chr(ord('A') + char2) + chr(ord('A') + char1))
 
     def _filepath(self):
         return '%s/wiki_%02d' % (self._dirname(), self.file_index)
@@ -2292,12 +2293,12 @@ class OutputSplitter(object):
         self.nextFile = nextFile
         self.compress = compress
         self.max_file_size = max_file_size
-        self.file = self.open(self.nextFile.next())
+        self.file = self.open(next(self.nextFile))
 
     def reserve(self, size):
         if self.file.tell() + size > self.max_file_size:
             self.close()
-            self.file = self.open(self.nextFile.next())
+            self.file = self.open(next(self.nextFile))
 
     def write(self, data):
         self.reserve(len(data))
@@ -2437,9 +2438,9 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     global moduleNamespace, modulePrefix
 
     if input_file == '-':
-        input = sys.stdin
+        input = sys.stdin.buffer
     else:
-        input = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
+        input = fileinput.FileInput(input_file, mode='rb', openhook=fileinput.hook_compressed)
 
     # collect siteinfo
     for line in input:
@@ -2470,7 +2471,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         if template_file:
             if os.path.exists(template_file):
                 logging.info("Preprocessing '%s' to collect template definitions: this may take some time.", template_file)
-                file = fileinput.FileInput(template_file, openhook=fileinput.hook_compressed)
+                file = fileinput.FileInput(template_file, mode='rb', openhook=fileinput.hook_compressed)
                 load_templates(file)
                 file.close()
             else:
@@ -2480,7 +2481,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
                 logging.info("Preprocessing '%s' to collect template definitions: this may take some time.", input_file)
                 load_templates(input, template_file)
                 input.close()
-                input = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
+                input = fileinput.FileInput(input_file, mode='rb', openhook=fileinput.hook_compressed)
         template_load_elapsed = default_timer() - template_load_start
         logging.info("Loaded %d templates in %.1fs", len(templates), template_load_elapsed)
 
@@ -2517,7 +2518,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     # start worker processes
     logging.info("Using %d extract processes.", worker_count)
     workers = []
-    for i in xrange(worker_count):
+    for i in range(worker_count):
         extractor = Process(target=extract_process,
                             args=(i, jobs_queue, output_queue))
         extractor.daemon = True  # only live while parent process lives
@@ -2757,7 +2758,7 @@ def main():
                 with open(args.templates) as file:
                     load_templates(file)
 
-        file = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
+        file = fileinput.FileInput(input_file, mode='rb', openhook=fileinput.hook_compressed)
         for page_data in pages_from(file):
             id, title, ns, page = page_data
             Extractor(id, title, page).extract(sys.stdout)

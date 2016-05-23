@@ -61,7 +61,7 @@ class NextFile(object):
         self.dir_index = -1
         self.file_index = -1
 
-    def next(self):
+    def __next__(self):
         self.file_index = (self.file_index + 1) % NextFile.filesPerDir
         if self.file_index == 0:
             self.dir_index += 1
@@ -93,12 +93,12 @@ class OutputSplitter(object):
         self.nextFile = nextFile
         self.compress = compress
         self.max_file_size = max_file_size
-        self.file = self.open(self.nextFile.next())
+        self.file = self.open(next(self.nextFile))
 
     def reserve(self, size):
         if self.file.tell() + size > self.max_file_size:
             self.close()
-            self.file = self.open(self.nextFile.next())
+            self.file = self.open(next(self.nextFile))
 
     def write(self, data):
         self.reserve(len(data))
