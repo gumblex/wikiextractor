@@ -2701,9 +2701,9 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     global moduleNamespace, modulePrefix
 
     if input_file == '-':
-        input = sys.stdin.buffer
+        input = sys.stdin
     else:
-        input = fileinput.FileInput(input_file, mode='rb', openhook=fileinput.hook_compressed)
+        input = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
 
     # collect siteinfo
     for line in input:
@@ -2746,7 +2746,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
                 logging.info("Preprocessing '%s' to collect template definitions: this may take some time.", input_file)
                 load_templates(input, template_file)
                 input.close()
-                input = fileinput.FileInput(input_file, mode='rb', openhook=fileinput.hook_compressed)
+                input = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
         template_load_elapsed = default_timer() - template_load_start
         logging.info("Loaded %d templates in %.1fs", len(templates), template_load_elapsed)
 
@@ -3024,7 +3024,7 @@ def main():
                 with open(args.templates) as file:
                     load_templates(file)
 
-        file = fileinput.FileInput(input_file, mode='rb', openhook=fileinput.hook_compressed)
+        file = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
         for page_data in pages_from(file):
             id, revid, title, ns, page = page_data
             Extractor(id, revid, title, page).extract(sys.stdout)
