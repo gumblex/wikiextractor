@@ -1,5 +1,9 @@
 from setuptools import setup
 
+def readme():
+    with open('README.md') as f:
+        return f.read()
+
 setup(
     name='wikiextractor',
 
@@ -7,15 +11,11 @@ setup(
                 'database dump',
     author='Giuseppe Attardi',
     author_email='attardi@di.unipi.it',
-    version='2.42',
+    version='2.66',
 
     url='https://github.com/attardi/wikiextractor',
 
     license="GPL 3.0",
     keywords=['text', 'nlp'],
-    entry_points={
-        'console_scripts': [
-            'wikiextractor = WikiExtractor:main'
-        ]
-    }
+    scripts=['WikiExtractor.py']
 )

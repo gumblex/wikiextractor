@@ -1,3 +1,85 @@
+2016-10-29  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* setup.py: use scripts instead of console_scripts.
+
+	* WikiExtractor.py (pages_from): handle self closing <text />.
+
+2016-08-31  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (findMatchingBraces): fixed ambiguous cases
+	like {{{!}} {{!}}}
+
+2016-08-30  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (Extractor.wiki2text): drop templates before
+	dropping tables.
+	(Extractor.templateParams): fixed RE for separating var from value.
+
+	(main): removed option xml_namespaces, since we extract only
+	articles, i.e. those with namespace 0.
+
+	(Extractor.clean): removed option --escapedoc, use --html instead.
+
+	* WikiExtractor.py (Extractor.transform): Keep <nowiki> or else
+	further expansion will be triggered.
+
+2016-08-29  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (callParserFunction): reworked order of
+	evaluation of template parameters, according to
+	   https://www.mediawiki.org/wiki/Help:Templates#Order_of_evaluation
+        Template parameters are fully evaluated before they are passed to the template.
+	The branching parser function are an exception, since evaluation
+	depends on values tested.
+
+	* WikiExtractor.py (callParserFunction): reworked handling of
+	parser function.
+	Handle expansion of:
+	   {{numero romano|1999}}
+	where Template:Numero romano = {{{{{|safesubst:}}}#invoke:Numero romano|main}}
+	and parameter body has no arguments, by getting them from frame.
+	Instead expansion of:
+	   {{Str endswith|1999|a.C.}}
+	where Template:Str endswith = {{#ifeq:{{#invoke:String|sub|s={{{1|}}}| -{{#invoke:String|len|s={{{2}}}}} |ignore_errors=true}}|{{{2|}}}|sì}}
+	uses parameters in template.
+
+	* WikiExtractor.py (Extractor.extract): Adds an h1 tag for title if --html is
+	passed. Patch contributed by okb1100 on GitHub.
+
+	* WikiExtractor.py (modules): added partial emulation of modules String and Roman.
+	)
+2016-08-26  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (nowiki): handle <nowiki>...</nowiki>.
+
+2016-08-22  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (Extractor.extract): fixed UTF-8 encoding with
+	option -a.
+
+2016-08-19  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (Extractor): fixed misspelled keepLists.
+
+2016-08-11  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (Extract): made escape_doc a class variable.
+
+2016-06-20  Seth Cleveland <scleveland@turnitin.com>
+
+	* WikiExtractor.py: Fix string encoding error for python 2 and log
+	extract exceptions.
+
+2016-06-19  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py: support for Python 3 by orangain@gmail.com
+
+2016-03-23  Seth Cleveland <scleveland@turnitin.com>
+
+	* WikiExtractor.py: add filtering options -- min text length, xml
+	namespace, and disambig pages. Added option to print the revision
+	id with each document.
+
 2016-03-23  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (compact): properly emit section headers when Extractor.keepSections.
