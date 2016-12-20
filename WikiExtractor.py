@@ -64,6 +64,7 @@ from io import StringIO
 from multiprocessing import Queue, Process, Value, cpu_count
 from timeit import default_timer
 
+import zhconv
 
 PY2 = sys.version_info[0] == 2
 if PY2:
@@ -201,6 +202,7 @@ ignoredTags = (
 )
 
 placeholder_tags = {'math': 'formula', 'code': 'codice'}
+title_langconv = re.compile(r'-\{T|(.*?)\}-')
 
 
 def normalizeTitle(title):
@@ -312,6 +314,9 @@ bold = re.compile(r"'''(.*?)'''")
 italic_quote = re.compile(r"''\"([^\"]*?)\"''")
 italic = re.compile(r"''(.*?)''")
 quote_quote = re.compile(r'""([^"]*?)""')
+
+# Matches br
+br_tag = re.compile(r'<\s*br\s*/?\s*>')
 
 # Matches space
 spaces = re.compile(r' {2,}')
@@ -515,9 +520,14 @@ class Extractor(object):
         """
         :param out: a memory file.
         """
+        if self.zhlocale:
+            # we cannot handle title manual conversion
+            self.title = zhconv.convert(self.title, self.zhlocale)
         logging.info('%s\t%s', self.id, self.title)
         url = get_url(self.id)
-        if Extractor.print_revision:
+        if self.toTXT:
+            header = ''
+        elif Extractor.print_revision:
             header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
         else:
             header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
@@ -547,7 +557,7 @@ class Extractor(object):
         text = self.wiki2text(text)
 
         text = compact(self.clean(text))
-        footer = "\n</doc>\n"
+        footer = "\n\n" if self.toTXT else "\n</doc>\n"
         if sum(len(line) for line in text) < Extractor.min_text_length:
             return
         if out == sys.stdout:   # option -a or -o -
@@ -625,6 +635,7 @@ class Extractor(object):
             text = italic_quote.sub(r'"\1"', text)
             text = italic.sub(r'"\1"', text)
             text = quote_quote.sub(r'"\1"', text)
+            text = br_tag.sub('\n', text)
         # residuals of unbalanced quotes
         text = text.replace("'''", '').replace("''", '"')
 
@@ -636,6 +647,8 @@ class Extractor(object):
 
         # drop MagicWords behavioral switches
         text = magicWordsRE.sub('', text)
+
+        text = zhconv.convert_for_mw(text, self.zhlocale or 'zh')
 
         # ############### Process HTML ###############
 
@@ -2941,6 +2954,8 @@ def main():
     groupP = parser.add_argument_group('Processing')
     groupP.add_argument("--html", action="store_true",
                         help="produce HTML output, subsumes --links")
+    groupP.add_argument("-t", "--txt", action="store_true",
+                        help="produce plain text output")
     groupP.add_argument("-l", "--links", action="store_true",
                         help="preserve links")
     groupP.add_argument("-s", "--sections", action="store_true",
@@ -2949,6 +2964,9 @@ def main():
                         help="preserve lists")
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
                         help="accepted namespaces in links")
+    groupP.add_argument("--zhlocale", default="unk", choices=('zh-cn', 'zh-tw',
+                        'zh-hk', 'zh-sg', 'zh-hans', 'zh-hant', 'unk'),
+                        help="convert to one of the Chinese locale")
     groupP.add_argument("--templates",
                         help="use or create file containing templates")
     groupP.add_argument("--no-templates", action="store_false",
@@ -2980,6 +2998,8 @@ def main():
     Extractor.keepSections = args.sections
     Extractor.keepLists = args.lists
     Extractor.toHTML = args.html
+    Extractor.toTXT = args.txt
+    Extractor.zhlocale = args.zhlocale if args.zhlocale != 'unk' else None
     Extractor.print_revision = args.revision
     Extractor.min_text_length = args.min_text_length
     if args.html:
