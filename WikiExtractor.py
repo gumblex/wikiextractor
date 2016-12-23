@@ -624,6 +624,8 @@ class Extractor(object):
         text = dropNested(text, r'{{', r'}}')
         text = dropNested(text, r'{\|', r'\|}')
 
+        text = zhconv.convert_for_mw(text, self.zhlocale or 'zh')
+
         # Handle bold/italic/quote
         if self.toHTML:
             text = bold_italic.sub(r'<b>\1</b>', text)
@@ -647,8 +649,6 @@ class Extractor(object):
 
         # drop MagicWords behavioral switches
         text = magicWordsRE.sub('', text)
-
-        text = zhconv.convert_for_mw(text, self.zhlocale or 'zh')
 
         # ############### Process HTML ###############
 
@@ -1373,6 +1373,21 @@ def roman_main(args):
     return toRoman(num, smallRomans)
 
 # ----------------------------------------------------------------------
+# Module:NoteTA
+# https://zh.wikipedia.org/wiki/%E6%A8%A1%E5%9D%97:NoteTA
+
+def noteta_main(args):
+    """Global Chinese conversion rules for a page."""
+    rules = []
+    for k, v in args.items():
+        if k == 'T':
+            rules.append('-{T|%s}-' % v)
+        elif k.isdigit():
+            rules.append('-{H|%s}-' % v)
+        # no CGroup support (code 'G')
+    return ''.join(rules)
+
+# ----------------------------------------------------------------------
 
 modules = {
     'convert': {
@@ -1395,6 +1410,10 @@ modules = {
 
     'Numero romano': {
         'main': roman_main
+    },
+
+    'NoteTA': {
+        'main': noteta_main
     }
 }
 
